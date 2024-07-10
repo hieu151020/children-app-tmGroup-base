@@ -129,10 +129,10 @@ const AuthenticationProvider = ({ children }: { children: any }) => {
       const loginPopupBinded = authService.loginPopup.bind(authService);
       const user = await loginPopupBinded();
       if (user) {
-        window.location.reload();
+        // window.location.reload();
       }
     } catch (error) {
-      showError(error);
+      // showError(error);
     }
   }, []);
 
@@ -161,7 +161,7 @@ const AuthenticationProvider = ({ children }: { children: any }) => {
       httpService.clearAuthStorage();
       window.sessionStorage.clear();
     } catch (error) {
-      showError(error);
+      // showError(error);
     }
   }, [userData, logoutUser]);
 

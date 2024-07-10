@@ -1,55 +1,66 @@
 import "./App.css";
-import { useAuth } from "app-launcher-auth";
+import { httpService, useAuth } from "app-launcher-auth";
 import React, { Fragment, useEffect, useState } from "react";
 // import AuthService from "./services/authServices";
-
 import axios from "axios";
+import { getToken, messaging } from "./helpers/firebase";
+import { getMessaging, onMessage } from "firebase/messaging";
+import { useSearchParams } from "react-router-dom";
+
 function App() {
   const { isLogged, user, loginPopup, loading, logout, isLaunchFromApp } =
     useAuth();
   const [data, setData] = useState([]);
-  const appId = process.env.REACT_APP_APP_ID || 0;
-  const dataMock = [
-    {
-      appClientId:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseHEwYnp5djAwMGoxd3psZHZ6amIxN3oiLCJpYXQiOjE3MTkwNTM5NDMsImV4cCI6MTcyMTY0NTk0M30.hVXQC-Q0FRFZ14N0L0we1NTy_ZsgPkrHdSePhjLCxPc",
-      appClientName:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseHEwYnp5djAwMGoxd3psZHZ6amIxN3oiLCJpYXQiOjE3MTkwNTM5NDMsImV4cCI6MTcyMTY0NTk0M30.hVXQC-Q0FRFZ14N0L0we1NTy_ZsgPkrHdSePhjLCxPc",
-      appClientSecret:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseHEwYnp5djAwMGoxd3psZHZ6amIxN3oiLCJpYXQiOjE3MTkwNTM5NDMsImV4cCI6MTcyMTY0NTk0M30.hVXQC-Q0FRFZ14N0L0we1NTy_ZsgPkrHdSePhjLCxPc",
-      loginRedirectUri: "",
-      fakeDataUrl: "https://pokeapi.co/api/v2/pokemon/ditto",
-    },
-    {
-      appClientId:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseG9pN3gxYzAwMDFidmduMTJkNWswbm0iLCJpYXQiOjE3MTg5NjMwNTMsImV4cCI6MTcyMTU1NTA1M30.M_5PaxyjbFdgajZgnwGhJVl-1g_3XzZ8rLxX8XrApL0",
-      appClientName:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseG9pN3gxYzAwMDFidmduMTJkNWswbm0iLCJpYXQiOjE3MTg5NjMwNTMsImV4cCI6MTcyMTU1NTA1M30.M_5PaxyjbFdgajZgnwGhJVl-1g_3XzZ8rLxX8XrApL0",
-      appClientSecret:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseG9pN3gxYzAwMDFidmduMTJkNWswbm0iLCJpYXQiOjE3MTg5NjMwNTMsImV4cCI6MTcyMTU1NTA1M30.M_5PaxyjbFdgajZgnwGhJVl-1g_3XzZ8rLxX8XrApL0",
-      loginRedirectUri: "",
-      fakeDataUrl: "https://pokeapi.co/api/v2/pokemon/ditto",
-    },
-    {
-      appClientId:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseG9pN3gxYzAwMDFidmduMTJkNWswbm0iLCJpYXQiOjE3MTg5NjMwNTMsImV4cCI6MTcyMTU1NTA1M30.M_5PaxyjbFdgajZgnwGhJVl-1g_3XzZ8rLxX8XrApL0",
-      appClientName:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseG9pN3gxYzAwMDFidmduMTJkNWswbm0iLCJpYXQiOjE3MTg5NjMwNTMsImV4cCI6MTcyMTU1NTA1M30.M_5PaxyjbFdgajZgnwGhJVl-1g_3XzZ8rLxX8XrApL0",
-      appClientSecret:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseG9pN3gxYzAwMDFidmduMTJkNWswbm0iLCJpYXQiOjE3MTg5NjMwNTMsImV4cCI6MTcyMTU1NTA1M30.M_5PaxyjbFdgajZgnwGhJVl-1g_3XzZ8rLxX8XrApL0",
-      loginRedirectUri: "",
-      fakeDataUrl: "https://pokeapi.co/api/v2/pokemon/ditto",
-    },
-  ];
+  const [param] = useSearchParams();
+  const token = param.get("token");
+  console.log(param, token, "param");
+  useEffect(() => {
+    const requestPermission = async () => {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          getToken(messaging, {
+            vapidKey:
+              "BEWDYnw8VUtOpgQ8_aZFctLrSusm3EnDVCEo-tq9JYUnJe7n38-qA1cT_xBs1A9w3l3QqWhfbCZyINYbAQABFr4",
+          })
+            .then((currentToken) => {
+              if (currentToken) {
+                console.log(currentToken, "currentToken");
+              } else {
+                console.log(
+                  "No registration token available. Request permission to generate one."
+                );
+              }
+            })
+            .catch((err) => {
+              console.log("An error occurred while retrieving token. ", err);
+              // ...
+            });
+        } else {
+          console.error("Permission not granted for Notification");
+        }
+      } catch (error) {
+        console.error("Error getting permission", error);
+      }
+    };
+    requestPermission();
+    const messaging = getMessaging();
+    onMessage(messaging, (payload) => {
+      console.log("Message received. ", payload);
+    });
+  }, []);
 
-  const handleConnectApp = async (appId) => {
+  const handleConnectApp = async () => {
     const token = localStorage.getItem("token");
     const body = {
-      tokenCognito: token,
-      appClientId: dataMock[appId].appClientId,
-      appClientName: dataMock[appId].appClientName,
-      appClientSecret: dataMock[appId].appClientSecret,
-      loginRedirectUri: dataMock[appId].loginRedirectUri,
+      appClientId:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseHEwYnp5djAwMGoxd3psZHZ6amIxN3oiLCJpYXQiOjE3MTkwNTM5NDMsImV4cCI6MTcyMTY0NTk0M30.hVXQC-Q0FRFZ14N0L0we1NTy_ZsgPkrHdSePhjLCxPc",
+      appClientName:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseHEwYnp5djAwMGoxd3psZHZ6amIxN3oiLCJpYXQiOjE3MTkwNTM5NDMsImV4cCI6MTcyMTY0NTk0M30.hVXQC-Q0FRFZ14N0L0we1NTy_ZsgPkrHdSePhjLCxPc",
+      appClientSecret:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseHEwYnp5djAwMGoxd3psZHZ6amIxN3oiLCJpYXQiOjE3MTkwNTM5NDMsImV4cCI6MTcyMTY0NTk0M30.hVXQC-Q0FRFZ14N0L0we1NTy_ZsgPkrHdSePhjLCxPc",
+      loginRedirectUri: "",
+      DataUrl: "http://103.143.142.245:9035/api/v1/app-intergration",
     };
     const res = await axios.post(
       "http://103.143.142.245:9035/api/v1/connect/code",
@@ -59,15 +70,43 @@ function App() {
       "http://103.143.142.245:9035/api/v1/connect/token_service",
       {
         code: res.data.data,
+        // fcmToken,
       }
     );
     await axios
-      .get(dataMock[appId].fakeDataUrl)
+      .get(body.DataUrl)
       .then((res) => {
         console.log(res);
         setData(res.data);
       })
       .catch();
+  };
+
+  const sendNoti = async () => {
+    const body = {
+      title: "Notification Title",
+      subTitle: "Notification Subtitle",
+      imageUrl: "https://example.com/image.png",
+      body: "This is the body of the notification.",
+      data: '{"key":"value"}',
+      type: "DEFAULT",
+    };
+
+    await axios
+      .post(
+        "http://103.143.142.245:9035/api/v1/notification-logs/send-noti",
+        body,
+        {
+          headers: token,
+        }
+      )
+      .then((res) => {
+        console.log(res);
+        setData(res.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   };
 
   if (loading) {
@@ -155,6 +194,7 @@ function App() {
         </div>
         <h2>Todos:</h2>
         <button onClick={() => handleConnectApp(0)}>mockapp</button>
+        <button onClick={sendNoti}>Send noti</button>
 
         <div
           style={{
@@ -164,64 +204,20 @@ function App() {
             marginTop: 12,
           }}
         >
-          {appId === "0" &&
-            data?.abilities?.map((el) => {
-              return (
-                <div
-                  key={el.id}
-                  style={{
-                    padding: 8,
-                    borderRadius: 8,
-                    border: "1px solid #f1f1f1",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                  }}
-                >
-                  <span>Name: {el.ability.name}</span>
-                  <span>url: {el.ability.url}</span>
-                </div>
-              );
-            })}
-          {appId === "1" &&
-            data?.game_indices?.map((el) => {
-              return (
-                <div
-                  key={el.id}
-                  style={{
-                    padding: 8,
-                    borderRadius: 8,
-                    border: "1px solid #f1f1f1",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                  }}
-                >
-                  <span>Version: {el.version.name}</span>
-                  <span>url: {el.version.url}</span>
-                </div>
-              );
-            })}
-          {appId === "2" &&
-            data?.stats?.map((el) => {
-              return (
-                <div
-                  key={el.id}
-                  style={{
-                    padding: 8,
-                    borderRadius: 8,
-                    border: "1px solid #f1f1f1",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                  }}
-                >
-                  <span>Base stats: {el.base_stat}</span>
-                  <span>Version: {el.stat.name}</span>
-                  <span>url: {el.stat.url}</span>
-                </div>
-              );
-            })}
+          {data && (
+            <div
+              style={{
+                padding: 8,
+                borderRadius: 8,
+                border: "1px solid #f1f1f1",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              {data}
+            </div>
+          )}
         </div>
       </div>
     </div>

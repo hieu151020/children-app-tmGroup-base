@@ -1,8 +1,10 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthService, httpService, useAuth } from "app-launcher-auth";
-import userService from "../../services/userService";
+
 import BaseUrl from "../../consts/baseUrl";
+
+import userService from "../../services/userService";
 
 function Callback() {
   const navigate = useNavigate();

@@ -10,6 +10,7 @@
     "aws-amplify": "^6.3.6",
     "axios": "^1.6.8",
     "env-cmd": "^10.1.0",
+    "firebase": "^10.12.2",
     "oidc-client-ts": "^3.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -23,7 +24,6 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
-    
   },
   "eslintConfig": {
     "extends": [
