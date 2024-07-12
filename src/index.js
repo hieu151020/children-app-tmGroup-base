@@ -10,22 +10,27 @@ import {
   CallbackLoginPopup,
   CallbackLogout,
 } from "app-launcher-auth";
-import { LOGOUT_REDIRECT_URI, REDIRECT_URI } from "./consts/configAWS";
+import {
+  CLIENT_ID,
+  CLIENT_SECRET,
+  COGNITO_URI,
+  LOGOUT_REDIRECT_URI,
+  REDIRECT_URI,
+  ROOT_URI,
+} from "./consts/config";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <AuthenticationProvider
     config={{
-      authority:
-        "https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_7wzWV6yyL",
-      client_id: "450mbafbnrds0p8e5rk3jf4jt5",
-      client_secret: "3tl8inakfht7kf2nktso58ighcr0t6v3fm9t69kh71sj3vn4htv",
+      authority:COGNITO_URI,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
       redirect_uri: REDIRECT_URI,
       scope: "openid email profile aws.cognito.signin.user.admin",
       response_type: "code",
-      launchUrl: "https://marketplace-demo-app.twenty-tech.com",
+      launchUrl: ROOT_URI,
       logoutRedirectLink: LOGOUT_REDIRECT_URI,
-      // apiGetUserUrl: `https://marketplace-mvp.twenty-tech.com/api/user/get-user-info`,
     }}
   >
     <BrowserRouter>

@@ -1,4 +1,4 @@
-import { LOGOUT_REDIRECT_URI } from "../consts/configAWS";
+import { LOGOUT_REDIRECT_URI } from "../consts/config";
 import { PERMISSION_ENUM } from "../consts/index";
 // import { showError } from "../helpers/toast";
 import { useLogoutUser } from "../hooks/users/useUsersHooks";
@@ -117,7 +117,7 @@ const AuthenticationProvider = ({ children }: { children: any }) => {
           onGetUserDataSuccess(user);
         }
       } catch (error) {
-        showError(error);
+        // showError(error);
       } finally {
         setCheckingAuth(false);
       }

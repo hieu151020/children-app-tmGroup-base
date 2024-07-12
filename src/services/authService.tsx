@@ -3,7 +3,7 @@ import {
   CLIENT_SECRET,
   COGNITO_URI,
   REDIRECT_URI,
-} from "../consts/configAWS";
+} from "../consts/config";
 import { User, UserManager } from "oidc-client-ts";
 
 class AuthService {

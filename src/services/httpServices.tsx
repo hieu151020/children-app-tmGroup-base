@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-import { LOGOUT_REDIRECT_URI } from "../consts/configAWS";
+import { LOGOUT_REDIRECT_URI } from "../consts/config";
 import { User } from "oidc-client-ts";
 import AuthService from "./authService";
-import { IUser } from "../providers/authenticationProvider";
+import { IUser } from "../providers/AuthenticationProvider";
 // import AuthService from './authService';
 
 export const TOKEN_KEY = "token";
