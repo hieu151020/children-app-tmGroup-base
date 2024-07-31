@@ -1,42 +1,43 @@
+import {
+  ConfirmSignUpCommand,
+  InitiateAuthCommand,
+  SignUpCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
 import { httpService, useAuth } from "app-launcher-auth";
 import axios from "axios";
 import { getMessaging, onMessage } from "firebase/messaging";
 import React, { Fragment, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import "./App.css";
 import { BASE_URL } from "./consts/apiUrl";
-import {
-  getToken,
-  messaging
-} from "./consts/config";
+import { CLIENT_ID, cognitoClient, getToken, messaging } from "./consts/config";
 
 function App() {
-  const {
-    isLogged,
-    user,
-    loginPopup,
-    loading,
-    logout,
-    isLaunchFromApp,
-    accessToken,
-  } = useAuth();
+  const { user, loginPopup, isLaunchFromApp, accessToken } = useAuth();
+  const isLoggedStorage = httpService.getTokenStorage();
+
+  const [isLogged, setIsLogged] = useState(!!isLoggedStorage);
   const [loadingData, setLoadingData] = useState(false);
   const [loadingNoti, setLoadingNoti] = useState(false);
   const [noti, setNoti] = useState({
     title: "",
     body: "",
   });
+  const [userInfoLogin, setUserInfoLogin] = useState({
+    username: "",
+    email: "",
+    password: "",
+    code: "",
+  });
+  const [isSignup, setSignup] = useState(false);
   const [tokenService, setTokenService] = useState();
-  const [param] = useSearchParams();
-  const token = param.get("token");
-  const appId = param.get("id");
+  const [isSendCode, setIsSendCode] = useState(false);
 
   useEffect(() => {
     const requestPermission = async () => {
       setLoadingData(true);
       try {
-        const permission = await Notification.requestPermission();
-        if (permission === "granted") {
+        // const permission = await Notification.requestPermission();
+        // if (permission === "granted") {
         getToken(messaging, {
           vapidKey:
             "BEWDYnw8VUtOpgQ8_aZFctLrSusm3EnDVCEo-tq9JYUnJe7n38-qA1cT_xBs1A9w3l3QqWhfbCZyINYbAQABFr4",
@@ -94,9 +95,9 @@ function App() {
             console.log("An error occurred while retrieving token. ", err);
             // ...
           });
-        } else {
-          console.error("Permission not granted for Notification");
-        }
+        // } else {
+        //   console.error("Permission not granted for Notification");
+        // }
       } catch (error) {
         setLoadingData(false);
 
@@ -108,7 +109,6 @@ function App() {
     }
   }, [accessToken]);
 
-
   useEffect(() => {
     const messaging = getMessaging();
     onMessage(messaging, (payload) => {
@@ -117,11 +117,11 @@ function App() {
   }, []);
 
   const sendNoti = async () => {
-    if(!tokenService){
-      alert("Don't have permission")
-      return
+    if (!tokenService) {
+      alert("Don't have permission");
+      return;
     }
-    setLoadingNoti(true)
+    setLoadingNoti(true);
     const body = {
       title: noti.title || "Notification Title",
       subTitle: "Notification Subtitle",
@@ -143,19 +143,98 @@ function App() {
           title: "",
           body: "",
         });
-        setLoadingNoti(false)
+        setLoadingNoti(false);
         alert("Send noti success");
         // setData(res.data);
       })
       .catch((err) => {
-        setLoadingNoti(false)
+        setLoadingNoti(false);
         console.log(err);
       });
   };
 
-  if (loading||loadingData) {
+  if (loadingData) {
     return <span>Loading...</span>;
   }
+
+  const handleLogin = async () => {
+    const params = {
+      AuthFlow: "USER_PASSWORD_AUTH",
+      ClientId: CLIENT_ID,
+      AuthParameters: {
+        USERNAME: userInfoLogin.username,
+        PASSWORD: userInfoLogin.password,
+      },
+    };
+    try {
+      const command = new InitiateAuthCommand(params);
+      const { AuthenticationResult } = await cognitoClient.send(command);
+      // const session = await signInAws(userInfoLogin.username, userInfoLogin.password);
+      console.log("Log in successful", AuthenticationResult);
+      if (AuthenticationResult) {
+        // sessionStorage.setItem("idToken", AuthenticationResult.IdToken || '');
+        // sessionStorage.setItem("accessToken", AuthenticationResult.AccessToken || '');
+        // sessionStorage.setItem("refreshToken", AuthenticationResult.RefreshToken || '');
+        setIsLogged(true);
+        httpService.saveTokenStorage(AuthenticationResult.AccessToken || "");
+      }
+    } catch (error) {
+      alert(`Sign in failed: ${error}`);
+    }
+  };
+
+  const handleSignUp = async () => {
+    console.log(CLIENT_ID, "CLIENT_ID");
+    const params = {
+      ClientId: CLIENT_ID,
+      Username: userInfoLogin.username,
+      Password: userInfoLogin.password,
+      UserAttributes: [
+        {
+          Name: "email",
+          Value: userInfoLogin.email,
+        },
+      ],
+    };
+    // if (password !== confirmPassword) {
+    //   alert('Passwords do not match');
+    //   return;
+    // }
+    try {
+      const command = new SignUpCommand(params);
+      console.log(command, "command");
+      const response = await cognitoClient.send(command);
+      setIsSendCode(true);
+      console.log(response, "response");
+      // await signUpAws(userInfoLogin.email, userInfoLogin.password);
+    } catch (error) {
+      alert(`Sign up failed: ${error}`);
+    }
+  };
+
+  const handleConfirmSignUp = async () => {
+    const params = {
+      ClientId: CLIENT_ID,
+      Username: userInfoLogin.username,
+      ConfirmationCode: userInfoLogin.code,
+    };
+    try {
+      const command = new ConfirmSignUpCommand(params);
+      await cognitoClient.send(command);
+      console.log("User confirmed successfully");
+      setIsSendCode(false);
+      setSignup(false);
+      return true;
+    } catch (error) {
+      console.error("Error confirming sign up: ", error);
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    setIsLogged(false);
+    httpService.clearAuthStorage();
+  };
 
   return (
     <div>
@@ -228,14 +307,98 @@ function App() {
               </h3>
             </Fragment>
           )}
-          <span style={{ marginBottom: 0 }}>Logged </span>
+          {isLogged ? (
+            <span>You are logged</span>
+          ) : (
+            <h3>
+              {isSignup ? "Signup" : isSendCode ? "Verify code" : "Login"}{" "}
+            </h3>
+          )}
 
-          {!isLaunchFromApp && (
+          {!isLaunchFromApp && !isLogged && (
             <Fragment>
-              {!isLogged && <button onClick={loginPopup}>Login</button>}
-              {isLogged && <button onClick={logout}>Logout</button>}
+              {isSendCode ? (
+                <div style={{ marginBottom: 2 }}>
+                  <div>Verify code</div>
+                  <input
+                    placeholder="Enter code"
+                    value={userInfoLogin.code}
+                    onChange={(e) =>
+                      setUserInfoLogin((prev) => ({
+                        ...prev,
+                        code: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              ) : (
+                <div style={{ marginBottom: 2 }}>
+                  <div>
+                    <div>Username</div>
+                    <input
+                      placeholder="Enter username"
+                      value={userInfoLogin.username}
+                      onChange={(e) =>
+                        setUserInfoLogin((prev) => ({
+                          ...prev,
+                          username: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  {isSignup && (
+                    <div>
+                      <div>Email</div>
+                      <input
+                        placeholder="Enter email"
+                        value={userInfoLogin.email}
+                        onChange={(e) =>
+                          setUserInfoLogin((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <div>Password</div>
+
+                    <input
+                      placeholder="Enter password"
+                      type="password"
+                      value={userInfoLogin.password}
+                      onChange={(e) =>
+                        setUserInfoLogin((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!isLogged && (
+                <button onClick={isSignup ? handleSignUp : handleLogin}>
+                  Submit
+                </button>
+              )}
+
+              {!isLogged && isSendCode && (
+                <button onClick={handleConfirmSignUp}>Verify code</button>
+              )}
+              {!isLogged && (
+                <button
+                  onClick={() => setSignup((prev) => !prev)}
+                  style={{ marginLeft: 6 }}
+                >
+                  {!isSignup ? "Create an account" : "Login"}
+                </button>
+              )}
             </Fragment>
           )}
+          {isLogged && <button onClick={logout}>Logout</button>}
         </div>
         <h2>Push Notification:</h2>
         {/* <button onClick={() => handleConnectApp(0)}>mockapp</button> */}
@@ -284,7 +447,9 @@ function App() {
                 />
               </div>
             </div>
-            <button disabled={loadingNoti} onClick={sendNoti}>Send noti</button>
+            <button disabled={loadingNoti} onClick={sendNoti}>
+              Send noti
+            </button>
           </>
         )}
       </div>

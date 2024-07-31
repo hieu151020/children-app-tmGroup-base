@@ -2,9 +2,10 @@ import { initializeApp } from "firebase/app";
 import { getToken, onMessage } from "firebase/messaging";
 import { getFirestore } from "firebase/firestore";
 import { getMessaging } from "firebase/messaging/sw";
+import { CognitoIdentityProviderClient } from "@aws-sdk/client-cognito-identity-provider";
 
 const isDevelopment = true;
-const env = "product";
+const env = "dev";
 let root_uri = "";
 let cognito_uri = "";
 let well_know = "";
@@ -25,17 +26,26 @@ else if (env === "dev") {
     'https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_7wzWV6yyL';
   well_know =
     'https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_7wzWV6yyL/.well-known/openid-configuration';
-  client_id = "450mbafbnrds0p8e5rk3jf4jt5";
-  client_secret = "3tl8inakfht7kf2nktso58ighcr0t6v3fm9t69kh71sj3vn4htv";
+  client_id = "4pqejtiue9qrqt7vmnbdkfeo0n";
+  client_secret = "1jls3k23chc8lreckf1okn5bm71rj0k1ifnttljha0oc888ikqoj";
 }
+
+export const CLIENT_ID = process.env.REACT_APP_CLIENT_ID
+export const USER_POOL_ID = process.env.REACT_APP_USER_POOL_ID
+export const cognitoClient = new CognitoIdentityProviderClient({
+  region: process.env.REACT_APP_REGION,
+});
+
 export const ROOT_URI = root_uri;
 export const COGNITO_URI = cognito_uri;
 export const WELL_KNOW = well_know;
-export const CLIENT_ID = client_id;
 export const CLIENT_SECRET = client_secret;
 export const REDIRECT_URI = `${window.location.origin}/login/callback`;
 export const LOGOUT_URI = `${window.location.origin}/logout`;
 export const LOGOUT_REDIRECT_URI = `${ROOT_URI}/logout?client_id=${CLIENT_ID}&logout_uri=${LOGOUT_URI}`;
+
+
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyC2DrV8cY-R5MZG1GwtBqi9C-HV8KCa71Q",
