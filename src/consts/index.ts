@@ -1,3 +1,10 @@
+import {
+  ConfirmSignUpCommand,
+  InitiateAuthCommand,
+  SignUpCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
+import { CLIENT_ID, cognitoClient } from "./config";
+
 export const isDevelopment =
   !process.env.NODE_ENV || process.env.NODE_ENV === "development";
 
@@ -53,3 +60,4 @@ export const API_KEY_TINY_EDITOR =
   "pyfe4ygo4uskbsupyjwkvj16peu92u1qlp1liqki0rnv1zct";
 
 export const SIZE_ICON_DEFAULT = 24;
+

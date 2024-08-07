@@ -30,11 +30,18 @@ else if (env === "dev") {
   client_secret = "1jls3k23chc8lreckf1okn5bm71rj0k1ifnttljha0oc888ikqoj";
 }
 
+//! Config app with env
+export const APP_ID = process.env.REACT_APP_ID_APP
 export const CLIENT_ID = process.env.REACT_APP_CLIENT_ID
+export const CLIENT_NAME = process.env.REACT_APP_CLIENT_NAME
 export const USER_POOL_ID = process.env.REACT_APP_USER_POOL_ID
+export const LOGIN_REDIRECT_URI = process.env.REACT_APP_LOGIN_REDIRECT_URI
 export const cognitoClient = new CognitoIdentityProviderClient({
   region: process.env.REACT_APP_REGION,
 });
+export const VAPID_KEY_FIREBASE =  "BEWDYnw8VUtOpgQ8_aZFctLrSusm3EnDVCEo-tq9JYUnJe7n38-qA1cT_xBs1A9w3l3QqWhfbCZyINYbAQABFr4"
+
+
 
 export const ROOT_URI = root_uri;
 export const COGNITO_URI = cognito_uri;

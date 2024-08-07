@@ -2,7 +2,6 @@ import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { LOGOUT_REDIRECT_URI } from "../consts/config";
 import { User } from "oidc-client-ts";
 import AuthService from "./authService";
-import { IUser } from "../providers/AuthenticationProvider";
 // import AuthService from './authService';
 
 export const TOKEN_KEY = "token";
@@ -96,7 +95,7 @@ class Services {
     localStorage.setItem(TOKEN_KEY, token);
   }
 
-  saveUserStorage(user: IUser) {
+  saveUserStorage(user: any) {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 

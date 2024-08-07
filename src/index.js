@@ -6,7 +6,6 @@ import reportWebVitals from "./reportWebVitals";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import {
-  AuthenticationProvider,
   CallbackLoginPopup,
   CallbackLogout,
 } from "app-launcher-auth";
@@ -18,6 +17,7 @@ import {
   REDIRECT_URI,
   ROOT_URI,
 } from "./consts/config";
+import AuthenticationProvider from "./providers/authenticationProvider.tsx";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

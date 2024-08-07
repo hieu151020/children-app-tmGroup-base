@@ -1,21 +1,34 @@
-import {
-  ConfirmSignUpCommand,
-  InitiateAuthCommand,
-  SignUpCommand,
-} from "@aws-sdk/client-cognito-identity-provider";
-import { httpService, useAuth } from "app-launcher-auth";
 import axios from "axios";
 import { getMessaging, onMessage } from "firebase/messaging";
 import React, { Fragment, useEffect, useState } from "react";
 import "./App.css";
-import { BASE_URL } from "./consts/apiUrl";
-import { CLIENT_ID, cognitoClient, getToken, messaging } from "./consts/config";
+import { BASE_URL, CONNECT_CODE, CONNECT_TOKEN } from "./consts/apiUrl";
+import {
+  APP_ID,
+  CLIENT_ID,
+  CLIENT_NAME,
+  getToken,
+  LOGIN_REDIRECT_URI,
+  messaging,
+  VAPID_KEY_FIREBASE,
+} from "./consts/config";
+import { useAuth } from "./providers/authenticationProvider.tsx";
+import httpServices from "./services/httpServices.ts";
+
 
 function App() {
-  const { user, loginPopup, isLaunchFromApp, accessToken } = useAuth();
-  const isLoggedStorage = httpService.getTokenStorage();
+  const {
+    user,
+    isLaunchFromApp,
+    accessToken,
+    loginAws,
+    signUpAws,
+    confirmSignUpAws,
+    isLogged,
+    loading,
+    logout,
+  } = useAuth();
 
-  const [isLogged, setIsLogged] = useState(!!isLoggedStorage);
   const [loadingData, setLoadingData] = useState(false);
   const [loadingNoti, setLoadingNoti] = useState(false);
   const [noti, setNoti] = useState({
@@ -39,51 +52,29 @@ function App() {
         // const permission = await Notification.requestPermission();
         // if (permission === "granted") {
         getToken(messaging, {
-          vapidKey:
-            "BEWDYnw8VUtOpgQ8_aZFctLrSusm3EnDVCEo-tq9JYUnJe7n38-qA1cT_xBs1A9w3l3QqWhfbCZyINYbAQABFr4",
+          vapidKey: VAPID_KEY_FIREBASE,
         })
           .then(async (currentToken) => {
             if (currentToken) {
-              console.log(currentToken, "currentToken");
-              // const response = await axios.get(
-              //   `${BASE_URL}/app-integration/${appId}`,
-              //   {
-              //     headers: {
-              //       Authorization: `Bearer ${token}`,
-              //     },
-              //   }
-              // );
-              // const detailApp = response?.data?.data;
-              // console.log(detailApp, "data");
               const body = {
-                appClientId:
-                  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseWdyaXoxaTAwMmxhMDkyaGo5bHVhbnQiLCJpYXQiOjE3MjA2NzE3MzksImV4cCI6MTcyMzI2MzczOX0.sw_GkJugW6JSo3LgWt8AyqZ7eY5ndZSpu2vu1dvUruQ",
-                appClientName:
-                  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseWdyaXoxaTAwMmxhMDkyaGo5bHVhbnQiLCJpYXQiOjE3MjA2NzE3MzksImV4cCI6MTcyMzI2MzczOX0.sw_GkJugW6JSo3LgWt8AyqZ7eY5ndZSpu2vu1dvUruQ",
-                appClientSecret:
-                  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNseWdyaXoxaTAwMmxhMDkyaGo5bHVhbnQiLCJpYXQiOjE3MjA2NzE3MzksImV4cCI6MTcyMzI2MzczOX0.sw_GkJugW6JSo3LgWt8AyqZ7eY5ndZSpu2vu1dvUruQ",
-                // appClientId: CLIENT_ID,
-                // appClientName: CLIENT_NAME,
-                // appClientSecret: CLIENT_SECRET,
-                loginRedirectUri: "https://marketplace-app-3.twenty-tech.com/",
+                appClientId: CLIENT_ID,
+                appClientName: CLIENT_NAME,
+                appClientSecret: "",
+                loginRedirectUri: LOGIN_REDIRECT_URI,
                 tokenCognito: accessToken,
               };
-              const res = await httpService.post(
-                `${BASE_URL}/connect/code`,
-                body
-              );
-              const tokenResponse = await httpService.post(
-                `${BASE_URL}/connect/token_service`,
-                {
-                  code: res.data.data,
-                  fcmToken: currentToken,
-                }
-              );
+
+              const res = await httpServices.post(CONNECT_CODE, body);
+              const tokenResponse = await httpServices.post(CONNECT_TOKEN, {
+                code: res.data.data,
+                fcmToken: currentToken,
+              });
+
               setTokenService(tokenResponse?.data?.data);
               setLoadingData(false);
             } else {
               setLoadingData(false);
-
+              
               console.log(
                 "No registration token available. Request permission to generate one."
               );
@@ -91,7 +82,7 @@ function App() {
           })
           .catch((err) => {
             setLoadingData(false);
-
+            alert(`Fail to connect: ${err.response.data.messages[0]}`);
             console.log("An error occurred while retrieving token. ", err);
             // ...
           });
@@ -104,10 +95,11 @@ function App() {
         console.error("Error getting permission", error);
       }
     };
+
     if (accessToken) {
       requestPermission();
     }
-  }, [accessToken]);
+  }, [isLogged]);
 
   useEffect(() => {
     const messaging = getMessaging();
@@ -125,20 +117,17 @@ function App() {
     const body = {
       title: noti.title || "Notification Title",
       subTitle: "Notification Subtitle",
-      imageUrl: "https://example.com/image.png",
+      imageUrl: "",
       body: noti.body || "This is the body of the notification.",
-      data: '{"key":"value"}',
+      data: `{"type":"CHILDREN_APP","appId":"${APP_ID}"}`,
       type: "DEFAULT",
-      userId: "2",
+      topicId: APP_ID,
       token: tokenService,
     };
 
     await axios
-      .post(`${BASE_URL}/notification-logs/send-noti`, body, {
-        headers: tokenService,
-      })
+      .post(`${BASE_URL}/notification-logs/send-noti`, body)
       .then((res) => {
-        console.log(res);
         setNoti({
           title: "",
           body: "",
@@ -153,88 +142,29 @@ function App() {
       });
   };
 
-  if (loadingData) {
-    return <span>Loading...</span>;
-  }
-
   const handleLogin = async () => {
-    const params = {
-      AuthFlow: "USER_PASSWORD_AUTH",
-      ClientId: CLIENT_ID,
-      AuthParameters: {
-        USERNAME: userInfoLogin.username,
-        PASSWORD: userInfoLogin.password,
-      },
-    };
-    try {
-      const command = new InitiateAuthCommand(params);
-      const { AuthenticationResult } = await cognitoClient.send(command);
-      // const session = await signInAws(userInfoLogin.username, userInfoLogin.password);
-      console.log("Log in successful", AuthenticationResult);
-      if (AuthenticationResult) {
-        // sessionStorage.setItem("idToken", AuthenticationResult.IdToken || '');
-        // sessionStorage.setItem("accessToken", AuthenticationResult.AccessToken || '');
-        // sessionStorage.setItem("refreshToken", AuthenticationResult.RefreshToken || '');
-        setIsLogged(true);
-        httpService.saveTokenStorage(AuthenticationResult.AccessToken || "");
-      }
-    } catch (error) {
-      alert(`Sign in failed: ${error}`);
-    }
+    await loginAws(userInfoLogin);
   };
 
   const handleSignUp = async () => {
-    console.log(CLIENT_ID, "CLIENT_ID");
-    const params = {
-      ClientId: CLIENT_ID,
-      Username: userInfoLogin.username,
-      Password: userInfoLogin.password,
-      UserAttributes: [
-        {
-          Name: "email",
-          Value: userInfoLogin.email,
-        },
-      ],
-    };
-    // if (password !== confirmPassword) {
-    //   alert('Passwords do not match');
-    //   return;
-    // }
-    try {
-      const command = new SignUpCommand(params);
-      console.log(command, "command");
-      const response = await cognitoClient.send(command);
+    const res = await signUpAws(userInfoLogin);
+    if (res) {
       setIsSendCode(true);
-      console.log(response, "response");
-      // await signUpAws(userInfoLogin.email, userInfoLogin.password);
-    } catch (error) {
-      alert(`Sign up failed: ${error}`);
     }
   };
 
   const handleConfirmSignUp = async () => {
-    const params = {
-      ClientId: CLIENT_ID,
-      Username: userInfoLogin.username,
-      ConfirmationCode: userInfoLogin.code,
-    };
-    try {
-      const command = new ConfirmSignUpCommand(params);
-      await cognitoClient.send(command);
-      console.log("User confirmed successfully");
-      setIsSendCode(false);
-      setSignup(false);
-      return true;
-    } catch (error) {
-      console.error("Error confirming sign up: ", error);
-      throw error;
-    }
+    await confirmSignUpAws(userInfoLogin);
+
+    setIsSendCode(false);
+    setSignup(false);
   };
 
-  const logout = () => {
-    setIsLogged(false);
-    httpService.clearAuthStorage();
-  };
+  //!Render
+
+  if (loadingData || loading) {
+    return <span>Loading...</span>;
+  }
 
   return (
     <div>
@@ -301,10 +231,7 @@ function App() {
         >
           {isLogged && (
             <Fragment>
-              <h2 style={{ marginBottom: 8, marginTop: 0 }}>app Monday</h2>
-              <h3 style={{ marginBottom: 8, marginTop: 0 }}>
-                Welcome: {isLogged ? user?.email : "-"}
-              </h3>
+              <h2 style={{ marginBottom: 8, marginTop: 0 }}>{CLIENT_NAME}</h2> 
             </Fragment>
           )}
           {isLogged ? (
@@ -379,7 +306,7 @@ function App() {
                 </div>
               )}
 
-              {!isLogged && (
+              {!isLogged && !isSendCode && (
                 <button onClick={isSignup ? handleSignUp : handleLogin}>
                   Submit
                 </button>
@@ -390,7 +317,10 @@ function App() {
               )}
               {!isLogged && (
                 <button
-                  onClick={() => setSignup((prev) => !prev)}
+                  onClick={() => {
+                    setSignup((prev) => !prev);
+                    setIsSendCode(false);
+                  }}
                   style={{ marginLeft: 6 }}
                 >
                   {!isSignup ? "Create an account" : "Login"}
